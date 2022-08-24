@@ -13,6 +13,12 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.components.binary_sensor import (
+    ENTITY_ID_FORMAT as BINARY_SENSOR_ENTITY_ID_FORMAT,
+    BinarySensorDeviceClass,
+    BinarySensorEntity,
+    BinarySensorEntityDescription,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
@@ -62,19 +68,75 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
 
 WARNING_SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
-        key="WTCPRE8",
-        name="Pre-no.8 Special Announcement",
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
         key="WTCSGNL",
         name="Tropical Cyclone Warning Signal",
-        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:weather-hurricane",
     ),
     SensorEntityDescription(
         key="tclevel",
         name="Tropical Cyclone Warning Level",
-        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:weather-hurricane",
+    ),
+    SensorEntityDescription(
+        key="WRAIN",
+        name="Rainstorm Warning Signal",
+        icon="mdi:weather-pouring",
+    ),
+)
+
+BINARY_WARNING_SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
+    BinarySensorEntityDescription(
+        key="WFIRE",
+        name="Fire Danger Warning",
+        icon="mdi:fire-alert",
+    ),
+    BinarySensorEntityDescription(
+        key="WFROST",
+        name="Frost Warning",
+        icon="mdi:snowflake-alert",
+    ),
+    BinarySensorEntityDescription(
+        key="WHOT",
+        name="Hot Weather Warning",
+        icon="mdi:weather-sunny-alert",
+        device_class=BinarySensorDeviceClass.HEAT,
+    ),
+    BinarySensorEntityDescription(
+        key="WCOLD",
+        name="Cold Weather Warning",
+        icon="mdi:snowflake-thermometer",
+        device_class=BinarySensorDeviceClass.COLD,
+    ),
+    BinarySensorEntityDescription(
+        key="WMSGNL",
+        name="Strong Monsoon Signal",
+        icon="mdi:weather-windy",
+    ),
+    BinarySensorEntityDescription(
+        key="WTCPRE8",
+        name="Pre-no.8 Special Announcement",
+        icon="mdi:numeric-8-box",
+    ),
+    BinarySensorEntityDescription(
+        key="WFNTSA",
+        name="Special Announcement on Flooding in the northern New Territories",
+        icon="mdi:home-flood",
+    ),
+    BinarySensorEntityDescription(
+        key="WL",
+        name="Landslip Warning",
+        icon="mdi:landslide",
+    ),
+    BinarySensorEntityDescription(
+        key="WTMW",
+        name="Tsunami Warning",
+        icon="mdi:tsunami",
+    ),
+    BinarySensorEntityDescription(
+        key="WTS",
+        name="Thunderstorm Warning",
+        icon="mdi:weather-lightning-rainy",
+        device_class=BinarySensorDeviceClass.MOISTURE,
     ),
 )
 
@@ -84,12 +146,9 @@ async def async_setup_entry(
 ) -> None:
     """Add HKO entities from a config_entry."""
     coordinator: HKODataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    sensors = [
-        HKOWeatherSensor(coordinator, description) for description in SENSOR_TYPES
-    ]
-    sensors.extend(
-        HKOWarningSensor(coordinator, description) for description in WARNING_SENSOR_TYPES
-    )
+    sensors = [HKOWeatherSensor(coordinator, description) for description in SENSOR_TYPES]
+    sensors.extend(HKOWarningSensor(coordinator, description) for description in WARNING_SENSOR_TYPES)
+    sensors.extend(HKOBinaryWarningSensor(coordinator, description) for description in BINARY_WARNING_SENSOR_TYPES)
     async_add_entities(sensors)
 
 
@@ -139,6 +198,37 @@ class HKOWarningSensor(CoordinatorEntity[HKODataUpdateCoordinator], SensorEntity
                 return self._sensor_data["subtype"]
             return "Active"
         return self._sensor_data
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._sensor_data = _parse_warning(self.entity_description, self.coordinator.data[ATTR_WARNINGS])
+        self.async_write_ha_state()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        if self._sensor_data is not None and isinstance(self._sensor_data, Mapping):
+            if "contents" in self._sensor_data:
+                self._attrs["contents"] = '\n\n'.join(self._sensor_data['contents'])
+        return self._attrs
+
+
+class HKOBinaryWarningSensor(CoordinatorEntity[HKODataUpdateCoordinator], BinarySensorEntity):
+    _attr_attribution = ATTRIBUTION
+    _attr_has_entity_name = True
+    entity_description: BinarySensorEntityDescription
+
+    def __init__(self, coordinator: HKODataUpdateCoordinator, description: BinarySensorEntityDescription) -> None:
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._sensor_data = _parse_warning(description, coordinator.data[ATTR_WARNINGS])
+        self._attrs: dict[str, Any] = {}
+        self._attr_name = description.name
+        self._attr_unique_id = description.key
+        self.entity_id = BINARY_SENSOR_ENTITY_ID_FORMAT.format(f"hko_{description.key}")
+
+    @property
+    def is_on(self) -> bool:
+        return self._sensor_data is not None
 
     @callback
     def _handle_coordinator_update(self) -> None:
