@@ -24,7 +24,7 @@ class HKOConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             climate_station_id = user_input[CONF_CLIMATE_STATION_ID]
             forecast_station_id = user_input[CONF_FORECAST_STATION_ID]
-            await self.async_set_unique_id(f"${climate_station_id}-${forecast_station_id}" , raise_on_progress=False)
+            await self.async_set_unique_id(f"{climate_station_id}-{forecast_station_id}" , raise_on_progress=False)
             return self.async_create_entry(
                 title=user_input[CONF_NAME], data=user_input
             )

@@ -7,6 +7,7 @@ from typing import Any, cast
 from collections.abc import Mapping
 
 from homeassistant.components.sensor import (
+    ENTITY_ID_FORMAT,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
@@ -19,6 +20,7 @@ from homeassistant.const import (
     PRESSURE_HPA,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -100,7 +102,9 @@ class HKOWeatherSensor(CoordinatorEntity[HKODataUpdateCoordinator], SensorEntity
         super().__init__(coordinator)
         self.entity_description = description
         self._sensor_data = coordinator.data[ATTR_AWS][description.key]
-        self._attr_unique_id = f"${coordinator.climate_station_id}-${coordinator.forecast_station_id}-${description.key}"
+        self._attr_name = description.name
+        self._attr_unique_id = f"{coordinator.climate_station_id}_{description.key}"
+        self.entity_id = ENTITY_ID_FORMAT.format(f"{self._attr_unique_id}")
 
     @property
     def native_value(self) -> Any:
@@ -120,22 +124,11 @@ class HKOWarningSensor(CoordinatorEntity[HKODataUpdateCoordinator], SensorEntity
     def __init__(self, coordinator: HKODataUpdateCoordinator, description: SensorEntityDescription) -> None:
         super().__init__(coordinator)
         self.entity_description = description
-        self._sensor_data = self._parse_warning(description, coordinator.data[ATTR_WARNINGS])
+        self._sensor_data = _parse_warning(description, coordinator.data[ATTR_WARNINGS])
         self._attrs: dict[str, Any] = {}
-        self._attr_unique_id = f"${coordinator.climate_station_id}-${coordinator.forecast_station_id}-${description.key}"
-
-    @staticmethod
-    def _parse_warning(description: SensorEntityDescription, data: dict[str, Any]) -> Any:
-        if description.key == "tclevel":
-            if "WTCSGNL" in data:
-                subtype = data["WTCSGNL"]["subtype"]
-                if subtype.startswith("TC"):
-                    return int(re.compile("TC(\d+)").match(subtype).group(1))
-            return None
-        try:
-            return data[description.key]
-        except KeyError:
-            return None
+        self._attr_name = description.name
+        self._attr_unique_id = description.key
+        self.entity_id = ENTITY_ID_FORMAT.format(f"hko_{description.key}")
 
     @property
     def native_value(self) -> Any:
@@ -149,7 +142,7 @@ class HKOWarningSensor(CoordinatorEntity[HKODataUpdateCoordinator], SensorEntity
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        self._sensor_data = self._parse_warning(self.entity_description, self.coordinator.data[ATTR_WARNINGS])
+        self._sensor_data = _parse_warning(self.entity_description, self.coordinator.data[ATTR_WARNINGS])
         self.async_write_ha_state()
 
     @property
@@ -158,3 +151,16 @@ class HKOWarningSensor(CoordinatorEntity[HKODataUpdateCoordinator], SensorEntity
             if "contents" in self._sensor_data:
                 self._attrs["contents"] = '\n\n'.join(self._sensor_data['contents'])
         return self._attrs
+
+
+def _parse_warning(description: EntityDescription, data: dict[str, Any]) -> Any:
+    if description.key == "tclevel":
+        if "WTCSGNL" in data:
+            subtype = data["WTCSGNL"]["subtype"]
+            if subtype.startswith("TC"):
+                return int(re.compile("TC(\d+)").match(subtype).group(1))
+        return None
+    try:
+        return data[description.key]
+    except KeyError:
+        return None

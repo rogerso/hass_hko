@@ -35,8 +35,7 @@ from .const import (
     MAP_CONDITION,
 )
 
-_LOGGER = logging.getLogger(__name__)
-
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
@@ -55,7 +54,7 @@ class HKOWeatherEntity(CoordinatorEntity[HKODataUpdateCoordinator], WeatherEntit
     def __init__(self, coordinator: HKODataUpdateCoordinator) -> None:
         """Initialise the platform with a data instance."""
         super().__init__(coordinator)
-        self._attr_unique_id = f"${coordinator.climate_station_id}-${coordinator.forecast_station_id}"
+        self._attr_unique_id = f"{coordinator.climate_station_id}-{coordinator.forecast_station_id}"
         self._attr_attribution = ATTRIBUTION
         self._attr_native_precipitation_unit = LENGTH_MILLIMETERS
         self._attr_native_pressure_unit = PRESSURE_HPA
