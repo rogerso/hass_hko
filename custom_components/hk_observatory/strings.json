@@ -1,0 +1,16 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "name": "[%key:common::config_flow::data::name%]",
+          "climate_station_id": "Station ID for current observations",
+          "forecast_station_id": "Station ID for forecasts"
+        }
+      }
+    },
+    "create_entry": {
+      "default": "This is still a work in progress."
+    }
+  }
+}
