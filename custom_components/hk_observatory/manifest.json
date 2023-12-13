@@ -1,12 +1,11 @@
 {
   "domain": "hk_observatory",
   "name": "Hong Kong Observatory",
-  "documentation": "https://www.example.com",
   "dependencies": [],
   "codeowners": ["@rogerso"],
   "requirements": ["aiohttp"],
   "config_flow": true,
   "iot_class": "cloud_polling",
   "loggers": ["hk_observatory"],
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
