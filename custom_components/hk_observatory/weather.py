@@ -27,6 +27,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import get_device_info
 from .hko_data import HKODataUpdateCoordinator
 from .const import (
     ATTR_AWS,
@@ -57,7 +58,9 @@ class HKOWeatherEntity(CoordinatorEntity[HKODataUpdateCoordinator], WeatherEntit
     def __init__(self, coordinator: HKODataUpdateCoordinator) -> None:
         """Initialise the platform with a data instance."""
         super().__init__(coordinator)
-        self._attr_unique_id = f"{coordinator.climate_station_id}-{coordinator.forecast_station_id}"
+        self._attr_name = None
+        self._attr_device_info = get_device_info("Forecast", coordinator.climate_station_id, coordinator.forecast_station_id)
+        self._attr_unique_id = f"hko_weather_{coordinator.climate_station_id}-{coordinator.forecast_station_id}"
         self._attr_attribution = ATTRIBUTION
         self._attr_native_precipitation_unit = LENGTH_MILLIMETERS
         self._attr_native_pressure_unit = PRESSURE_HPA

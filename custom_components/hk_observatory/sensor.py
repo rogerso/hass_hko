@@ -33,6 +33,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import get_device_info
 from .hko_data import HKODataUpdateCoordinator
 from .const import (
     ATTR_AWS,
@@ -186,7 +187,8 @@ class HKOWeatherSensor(CoordinatorEntity[HKODataUpdateCoordinator], SensorEntity
         self.entity_description = description
         self._sensor_data = coordinator.data[ATTR_AWS][description.key]
         self._attr_name = description.name
-        self._attr_unique_id = f"{coordinator.climate_station_id}_{description.key}"
+        self._attr_unique_id = f"hko_{coordinator.climate_station_id}_{description.key}"
+        self._attr_device_info = get_device_info(coordinator.name, coordinator.climate_station_id, coordinator.forecast_station_id)
         self.entity_id = ENTITY_ID_FORMAT.format(f"{self._attr_unique_id}")
 
     @property
@@ -210,8 +212,9 @@ class HKOWarningSensor(CoordinatorEntity[HKODataUpdateCoordinator], SensorEntity
         self._sensor_data = _parse_warning(description, coordinator.data[ATTR_WARNINGS])
         self._attrs: dict[str, Any] = {}
         self._attr_name = description.name
-        self._attr_unique_id = description.key
-        self.entity_id = ENTITY_ID_FORMAT.format(f"hko_{description.key}")
+        self._attr_unique_id = f"hko_warning_{description.key}"
+        self._attr_device_info = get_device_info(coordinator.name, coordinator.climate_station_id, coordinator.forecast_station_id)
+        self.entity_id = ENTITY_ID_FORMAT.format(f"hko_warning_{description.key}")
 
     @property
     def native_value(self) -> Any:
@@ -247,8 +250,9 @@ class HKOBinaryWarningSensor(CoordinatorEntity[HKODataUpdateCoordinator], Binary
         self._sensor_data = _parse_warning(description, coordinator.data[ATTR_WARNINGS])
         self._attrs: dict[str, Any] = {}
         self._attr_name = description.name
-        self._attr_unique_id = description.key
-        self.entity_id = BINARY_SENSOR_ENTITY_ID_FORMAT.format(f"hko_{description.key}")
+        self._attr_unique_id = f"hko_warning_{description.key}"
+        self._attr_device_info = get_device_info(coordinator.name, coordinator.climate_station_id, coordinator.forecast_station_id)
+        self.entity_id = BINARY_SENSOR_ENTITY_ID_FORMAT.format(f"hko_warning_{description.key}")
 
     @property
     def is_on(self) -> bool:
@@ -273,7 +277,7 @@ def _parse_warning(description: EntityDescription, data: dict[str, Any]) -> Any:
             subtype = data["WTCSGNL"]["subtype"]
             if subtype.startswith("TC"):
                 return int(re.compile("TC(\d+)").match(subtype).group(1))
-        return None
+        return int(0)
     try:
         return data[description.key]
     except KeyError:
