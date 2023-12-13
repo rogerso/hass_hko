@@ -24,6 +24,8 @@ from homeassistant.const import (
     PERCENTAGE,
     TEMP_CELSIUS,
     PRESSURE_HPA,
+    UnitOfSpeed,
+    UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityDescription
@@ -47,7 +49,7 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
         key="TEMP",
         device_class=SensorDeviceClass.TEMPERATURE,
         name="Temperature",
-        native_unit_of_measurement=TEMP_CELSIUS,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
@@ -63,6 +65,28 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
         name="Pressure",
         native_unit_of_measurement=PRESSURE_HPA,
         state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="WINDSPEED",
+        device_class=SensorDeviceClass.WIND_SPEED,
+        name="Wind Speed",
+        native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+    ),
+    SensorEntityDescription(
+        key="GUST",
+        device_class=SensorDeviceClass.WIND_SPEED,
+        name="Wind Gust",
+        native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+    ),
+    SensorEntityDescription(
+        key="WINDDIRECTION",
+        name="Wind Direction",
+        icon="mdi:compass-outline",
+        entity_registry_enabled_default=False,
     ),
 )
 

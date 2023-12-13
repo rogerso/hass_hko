@@ -14,7 +14,16 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.core import HomeAssistant
 import homeassistant.util.dt as dt_util
 
-from .const import ATTR_AWS, ATTR_FORECAST, ATTR_FORECAST_LAST_UPDATED, ATTR_OTHER, ATTR_WARNINGS, CONF_CLIMATE_STATION_ID, CONF_FORECAST_STATION_ID, DOMAIN, ATTR_AWS_LAST_UPDATED
+from .const import (
+  ATTR_AWS,
+  ATTR_FORECAST,
+  ATTR_DAILY_FORECAST,
+  ATTR_OTHER,
+  ATTR_WARNINGS,
+  DOMAIN,
+  ATTR_AWS_LAST_UPDATED,
+  ATTR_FORECAST_LAST_UPDATED,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +42,7 @@ class HKODataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         name: str,
     ) -> None:
         """Initialize."""
+        self.name = name
         self.session = session
         self.climate_station_id = climate_station_id
         self.forecast_station_id = forecast_station_id
@@ -42,7 +52,7 @@ class HKODataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_get_station_data(self) -> dict[str, Any]:
         """Get automatic weather station (AWS) observations."""
-        resp = await self.session.get("https://maps.weather.gov.hk/r4/input_files/latestReadings_AWS1")
+        resp = await self.session.get("https://www.hko.gov.hk/wxinfo/awsgis/latestReadings_AWS1_v2.txt")
         rawdata = await resp.text()
         firstline, datalines = rawdata.split('\n', 1)
         datareader = csv.DictReader(datalines.split('\n'))
@@ -60,12 +70,15 @@ class HKODataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         url = f"https://maps.weather.gov.hk/ocf/dat/{self.forecast_station_id}.xml"
         resp = await self.session.get(url)
         rawdata = await resp.json(content_type=None)
-        data = rawdata["HourlyWeatherForecast"]
-        last_modified = dt_util.as_utc(
-            datetime.strptime(
-                str(rawdata["LastModified"]) + " +0800", "%Y%m%d%H%M%S %z"
-            )
-        )
+        data = {
+            "hourly": rawdata["HourlyWeatherForecast"],
+            "daily": rawdata["DailyForecast"],
+            "last_modified": dt_util.as_utc(
+                datetime.strptime(
+                    str(rawdata["LastModified"]) + " +0800", "%Y%m%d%H%M%S %z"
+                )
+            ),
+        }
         return data
 
     async def _async_get_other_data(self) -> dict[str, Any]:
@@ -93,4 +106,11 @@ class HKODataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 warnings = await self._async_get_warnings()
         except ClientConnectorError as error:
             raise UpdateFailed(error) from error
-        return {ATTR_AWS: aws, ATTR_FORECAST: forecast, ATTR_OTHER: other, ATTR_WARNINGS: warnings}
+        return {
+            ATTR_AWS: aws,
+            ATTR_FORECAST: forecast["hourly"],
+            ATTR_DAILY_FORECAST: forecast["daily"],
+            ATTR_FORECAST_LAST_UPDATED: forecast["last_modified"],
+            ATTR_OTHER: other,
+            ATTR_WARNINGS: warnings,
+        }

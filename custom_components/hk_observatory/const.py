@@ -1,21 +1,23 @@
-"""Constants for HKO integration."""
-from __future__ import annotations
+"""Constants for the Hong Kong Observatory integration."""
 
 from typing import Final
+
+DOMAIN:Final = "hk_observatory"
 
 ATTRIBUTION: Final = "Data provided by Hong Kong Observatory"
 CONF_CLIMATE_STATION_ID: Final = "climate_station_id"
 CONF_FORECAST_STATION_ID: Final = "forecast_station_id"
-DOMAIN: Final = "hk_observatory"
 
 ATTR_AWS_LAST_UPDATED = "_aws_last_updated"
 ATTR_FORECAST_LAST_UPDATED = "_forecast_last_updated"
 
 ATTR_AWS = "_aws"
 ATTR_FORECAST = "_forecast"
+ATTR_DAILY_FORECAST = "_daily_forecast"
 ATTR_OTHER = "_other"
 ATTR_WARNINGS = "_warn"
 
+# https://www.hko.gov.hk/textonly/v2/explain/wxicon_e.htm
 MAP_CONDITION = {
     50: "sunny",
     51: "partlycloudy",
